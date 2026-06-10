@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上海平和学校AP部课程系统 6.8 (美高4年制历史联动版)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #030712;      /* 深邃纯黑 */
+            --bg-surface: #0b0f19;   /* 舱体冷灰 */
+            --bg-card: #111827;      /* 面板灰 */
+            --border: #1f2937;
+            --primary: #3b82f6;      /* 极光蓝 */
+            --accent: #f59e0b;       /* 琥珀金 */
+            --success: #10b981;      /* 荧光绿 */
+            --danger: #ef4444;       /* 警示红 */
+            --text: #f3f4f6;
+            --text-muted: #6b7280;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif; }
+        body { background-color: var(--bg-base); color: var(--text); padding: 20px; line-height: 1.4; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+        .logo-box h1 { font-size: 1.5rem; font-weight: 700; background: linear-gradient(to right, #fff, #9ca3af); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 1px; }
+        .logo-box p { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+        
+        .auth-bar { display: flex; gap: 8px; align-items: center; font-size: 0.75rem; }
+        .role-tag { padding: 2px 6px; border-radius: 4px; font-weight: bold; background: #1f2937; color: #9ca3af; }
+        .role-tag.admin { background: rgba(245,158,11,0.15); color: var(--accent); border: 1px solid var(--accent); }
+
+        /* 三栏宽网格布局 */
+        .three-column-layout { display: grid; grid-template-columns: 1.2fr 1.1fr 0fr; gap: 0px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .three-column-layout.admin-active { grid-template-columns: 1.2fr 1fr 1.2fr; gap: 15px; }
+
+        .panel { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 12px; height: fit-content; }
+        
+        #adminMainPanel { display: none; opacity: 0; transition: opacity 0.3s ease; }
+        .three-column-layout.admin-active #adminMainPanel { display: flex; opacity: 1; }
+
+        .panel-title { font-size: 0.9rem; font-weight: 700; color: #fff; text-transform: uppercase; border-left: 3px solid var(--primary); padding-left: 6px; margin-bottom: 4px; }
+        
+        /* 表单与灰底字输入 */
+        .form-item { display: flex; flex-direction: column; gap: 4px; }
+        .form-item label { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
+        .form-item input, .form-item select, .form-item textarea { background: var(--bg-base); border: 1px solid var(--border); padding: 6px 10px; border-radius: 4px; color: #fff; font-size: 0.8rem; }
+        .form-item input:focus, .form-item select:focus { border-color: var(--primary); outline: none; }
+        
+        .form-item input::placeholder { color: #4b5563; font-style: italic; font-size: 0.75rem; }
+
+        .btn { padding: 6px 12px; border-radius: 4px; border: none; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-accent { background: var(--accent); color: #000; }
+        .btn-danger { background: rgba(239,68,68,0.1); color: var(--danger); border: 1px solid var(--danger); }
+        .btn-danger:hover { background: var(--danger); color: #fff; }
+
+        /* 课程看板 */
+        .grade-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-bottom: 10px; }
+        .grade-header { font-size: 0.8rem; font-weight: 700; color: var(--primary); border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 6px; display: flex; justify-content: space-between; }
+        .course-stack { display: flex; flex-direction: column; gap: 4px; }
+        
+        .course-node { background: var(--bg-base); border: 1px solid var(--border); padding: 6px 8px; border-radius: 4px; font-size: 0.75rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .course-node:hover { border-color: var(--primary); background: #0d1527; }
+        
+        .level-tag { font-size: 0.6rem; padding: 1px 4px; border-radius: 3px; font-weight: bold; margin-right: 4px; }
+        .lvl-ap { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid var(--primary); }
+        .lvl-hon { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid var(--success); }
+        .lvl-reg { background: rgba(107,114,128,0.15); color: #9ca3af; border: 1px solid var(--text-muted); }
+
+        /* 后台微型表格 */
+        .table-container { max-height: 180px; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 5px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.7rem; text-align: left; }
+        th, td { padding: 5px; border-bottom: 1px solid var(--border); }
+        th { background: var(--bg-card); color: var(--text-muted); position: sticky; top: 0; z-index: 10; }
+
+        /* 算分面板行排版 */
+        .score-row { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 6px; align-items: center; font-size: 0.7rem; padding: 5px 0; border-bottom: 1px solid #1f2937; }
+        .score-input { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 3px; text-align: center; font-size: 0.7rem; border-radius: 3px; }
+
+        /* 历史GPA回填面板 */
+        .history-gpa-box { background: rgba(59, 130, 246, 0.05); border: 1px dashed var(--primary); padding: 8px; border-radius: 6px; margin-bottom: 8px; }
+        .history-grid-row { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 6px; margin-top: 5px; align-items: center; }
+        .history-input { background: #000; border: 1px solid var(--border); color: #fff; padding: 3px 5px; font-size: 0.7rem; text-align: center; border-radius: 4px; width: 100%; }
+
+        /* 模态弹窗 */
+        .modal-mask { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(3px); justify-content: center; align-items: center; z-index: 999; }
+        .modal-box { background: var(--bg-surface); border: 1px solid #374151; padding: 20px; border-radius: 8px; max-width: 500px; width: 90%; }
+        .alternative-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; margin-top: 10px; }
+        .alt-item { background: var(--bg-card); border: 1px solid var(--border); padding: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; }
+
+        /* 教务筛选控制条 */
+        .filter-bar-container { background: var(--bg-card); border: 1px solid var(--primary); padding: 8px; border-radius: 6px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 5px; }
+        .filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+        .filter-input-cell { background: var(--bg-base); border: 1px solid var(--border); color: #fff; font-size: 0.65rem; padding: 3px 6px; border-radius: 4px; width: 100%; }
+
+        /* 分年级 GPA 看板微章样式 */
+        .gpa-badge-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: rgba(255,255,255,0.02); padding: 5px; border-radius: 4px; font-size: 0.65rem; border: 1px dashed #1f2937; margin-bottom: 3px; }
+        .badge-year-title { grid-column: span 2; font-weight: bold; border-left: 2px solid var(--primary); padding-left: 4px; color: #e5e7eb; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo-box">
+        <h1>上海平和学校AP部课程系统</h1>
+        <p>平和双语高级选课仿真座舱 · 自由专业推荐算法与动态隐形管理控制台</p>
+    </div>
+    <div class="auth-bar" id="authZone">
+        <span class="role-tag" id="roleBadge">STUDENT VIEW</span>
+        <div id="loginFormElements" style="display: inline-flex; gap:6px; align-items:center;">
+            <input type="password" id="admPwd" placeholder="请输入教务口令" style="width:110px; background:#111; border:1px solid #333; color:#fff; padding:3px 6px; font-size:0.7rem; border-radius:4px;">
+            <button class="btn btn-primary" style="padding:3px 10px;" onclick="tryAdminLogin()">管理员鉴权</button>
+        </div>
+        <div id="logoutFormElements" style="display: none; gap:6px; align-items:center;">
+            <button class="btn btn-accent" style="padding:3px 8px; font-size:0.7rem;" onclick="openPasswordModal()">🔐 修改密码</button>
+            <button class="btn btn-danger" style="padding:3px 8px; font-size:0.7rem;" onclick="adminLogout()">登出后台</button>
+        </div>
+    </div>
+</header>
+
+<div class="three-column-layout" id="mainLayoutGrid">
+    
+    <div class="panel">
+        <div class="panel-title">💡 1. 选择</div>
+        <div class="form-item">
+            <label>所处年级阶段 (Grade)</label>
+            <select id="studentGrade" onchange="handleGradeChangeRefresh()">
+                <option value="9">Grade 9 (预高)</option>
+                <option value="10">Grade 10 (高一)</option>
+                <option value="11">Grade 11 (高二)</option>
+                <option value="12">Grade 12 (高三)</option>
+            </select>
+        </div>
+        
+        <div class="form-item">
+            <label>目标专业</label>
+            <input type="text" id="targetMajor" value="" placeholder="e.g., Data Science / Economics / Mathematics">
+        </div>
+        <div class="form-item">
+            <label>目标GPA</label>
+            <input type="number" id="gpaGoal" step="0.1" min="3.0" max="5.0" value="" placeholder="e.g., 4.5">
+        </div>
+        
+        <div class="form-item">
+            <label>个人核心学术兴趣点 (英文逗号隔开)</label>
+            <input type="text" id="userKeywords" placeholder="e.g., coding, physics, lab, finance">
+        </div>
+        <button class="btn btn-primary" style="width: 100%; font-weight:bold;" onclick="triggerAiEngine()">🧠 匹配大学修课大数据并生成蓝图</button>
+
+        <div class="panel-title" style="margin-top: 8px; border-left-color: var(--accent);">📊 2. 真实 GPA 算分器 (单年原始分 + 历史联动)</div>
+        
+        <div id="historyGpaPanel" class="history-gpa-box" style="display: none;">
+            <div style="font-size: 0.7rem; font-weight: bold; color: var(--accent);">⏳ 选填：往届学年历史已获 GPA 回填箱</div>
+            <div id="historyInputsContainer"></div>
+        </div>
+
+        <p style="font-size:0.65rem; color:var(--text-muted); margin-bottom:-4px;" id="scoreSectionTitle">请输入当前年级原始百分分：</p>
+        
+        <div id="realScoreContainer" style="max-height: 160px; overflow-y:auto; background:var(--bg-base); padding:6px; border-radius:4px; border:1px solid var(--border);">
+            <p style="font-size:0.7rem; color:var(--text-muted); text-align:center;">请先点击上方按钮匹配生成四年规划蓝图</p>
+        </div>
+        
+        <div style="background:var(--bg-card); padding:8px; border-radius:4px; display:flex; flex-direction:column; gap:5px;">
+            
+            <div class="gpa-badge-row">
+                <div class="badge-year-title">🎒 Grade 9 (预高绩点)</div>
+                <div>常规未加权: <span id="g9Unweighted" style="color:var(--accent); font-weight:bold;">--</span></div>
+                <div>白皮书加权: <span id="g9Weighted" style="color:var(--success); font-weight:bold;">--</span></div>
+            </div>
+
+            <div class="gpa-badge-row">
+                <div class="badge-year-title">🎒 Grade 10 (高一绩点)</div>
+                <div>常规未加权: <span id="g10Unweighted" style="color:var(--accent); font-weight:bold;">--</span></div>
+                <div>白皮书加权: <span id="g10Weighted" style="color:var(--success); font-weight:bold;">--</span></div>
+            </div>
+
+            <div class="gpa-badge-row">
+                <div class="badge-year-title">🎒 Grade 11 (高二绩点)</div>
+                <div>常规未加权: <span id="g11Unweighted" style="color:var(--accent); font-weight:bold;">--</span></div>
+                <div>白皮书加权: <span id="g11Weighted" style="color:var(--success); font-weight:bold;">--</span></div>
+            </div>
+
+            <div class="gpa-badge-row">
+                <div class="badge-year-title">🎒 Grade 12 (高三绩点)</div>
+                <div>常规未加权: <span id="g12Unweighted" style="color:var(--accent); font-weight:bold;">--</span></div>
+                <div>白皮书加权: <span id="g12Weighted" style="color:var(--success); font-weight:bold;">--</span></div>
+            </div>
+
+            <div style="border-top: 1px solid var(--border); padding-top:4px; display:flex; flex-direction:column; gap:2px; font-size:0.7rem; font-weight:bold;">
+                <div style="display:flex; justify-content:space-between; color: var(--accent);">
+                    <span>★ 累计毕业未加权 Total GPA:</span>
+                    <span id="outUnweightedTotal" style="font-size:0.75rem;">--</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; color: var(--success);">
+                    <span>★ 累计毕业加权 Total GPA (含回填):</span>
+                    <span id="outWeightedTotal" style="font-size:0.8rem;">--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" style="background: #060b13;">
+        <div class="panel-title" style="border-left-color: var(--success);">📅 3. 平和四年制课程安排大看板</div>
+        <div style="background:var(--bg-card); padding:5px; border-radius:4px; font-size:0.65rem; color:#cbd5e1; border:1px dashed var(--border); line-height: 1.4;">
+            📌 课程层级满绩红线：<span style="color:var(--primary); font-weight:bold;">Regular: 4.0</span> | <span style="color:var(--success); font-weight:bold;">Honor: 4.5</span> | <span style="color:var(--accent); font-weight:bold;">Advanced: 5.0</span>
+        </div>
+        
+        <div id="blueprintDashboard" style="flex:1; display:flex; flex-direction:column; gap:8px;">
+            <p style="font-size:0.75rem; color:var(--text-muted); text-align:center; margin-top:40px;">← 请在左侧配置好选择参数并点击匹配按钮</p>
+        </div>
+        
+        <div style="background:var(--bg-card); padding:6px; border-radius:4px; display:flex; justify-content:space-between; font-size:0.7rem; font-weight:bold;">
+            <span style="color:var(--success);">当前及未来科目数: <span id="creditIndicator">0</span> 门</span>
+            <span style="color:var(--primary);">规划蓝图均分红线: <span id="avgWeightIndicator">0.00</span></span>
+        </div>
+    </div>
+
+    <div class="panel" id="adminMainPanel">
+        <div class="panel-title" style="border-left-color: var(--accent);">🛠️ 4. 平和教务处核心控制台</div>
+        
+        <div style="background:rgba(245,158,11,0.05); padding:6px; border-radius:6px; border:1px solid rgba(245,158,11,0.3);">
+            <div style="font-size:0.75rem; font-weight:bold; color:var(--accent); margin-bottom:4px;">⚙️ 动态重塑：百分比分值矩阵划分</div>
+            <div class="table-container" style="max-height: 90px; margin-bottom: 3px;">
+                <table>
+                    <thead><tr><th>等级</th><th>最低红线分数</th><th>基准绩点</th></tr></thead>
+                    <tbody id="gpaMatrixAdminBody"></tbody>
+                </table>
+            </div>
+            <button class="btn btn-accent" style="width:100%; font-size:0.65rem; padding:2px;" onclick="saveGpaMatrixSettings()">💾 保存并应用新 GPA 映射算法</button>
+        </div>
+
+        <div style="background:var(--bg-card); padding:5px; border-radius:6px; border:1px solid var(--border); display:flex; flex-direction:column; gap:4px;">
+            <div style="font-size:0.75rem; font-weight:bold; color:#fff;" id="adminFormTitle">📢 投放/修改平和科目教学大纲</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
+                <input type="text" id="cId" placeholder="课程代码" style="font-size:0.7rem; padding:3px;">
+                <input type="text" id="cName" placeholder="标准课程名称" style="font-size:0.7rem; padding:3px;">
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px;">
+                <select id="cDept" style="font-size:0.7rem; padding:3px;">
+                    <option value="Chinese">语文组</option><option value="English">英语组</option>
+                    <option value="Math">数学组</option><option value="Physics">物理组</option>
+                    <option value="Chemistry">化学组</option><option value="Biology">生物组</option>
+                    <option value="Humanities">人文组</option><option value="Elective_One">选修一</option>
+                    <option value="Elective_Two">选修二</option>
+                </select>
+                <select id="cType" onchange="syncWeightBonus()" style="font-size:0.7rem; padding:3px;">
+                    <option value="Advance">AP级</option><option value="Honor">荣誉级</option><option value="Regular">基础级</option>
+                </select>
+                <input type="number" id="cWeight" step="0.1" value="5.0" style="font-size:0.7rem; padding:3px;">
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
+                <input type="text" id="cGrades" value="9,10,11,12" style="font-size:0.7rem; padding:3px;">
+                <input type="text" id="cPrereq" placeholder="前置依赖(选填)" style="font-size:0.7rem; padding:3px;">
+            </div>
+            <textarea id="cDesc" rows="1" placeholder="教学大纲核心描述..." style="font-size:0.7rem; padding:3px;"></textarea>
+            <div style="display:flex; gap:4px;">
+                <button class="btn btn-primary" style="flex:1; padding:3px;" onclick="submitCourseToDatabase()">🚀 发布/覆盖更新</button>
+                <button class="btn btn-danger" id="btnCancelEdit" style="display:none; padding:3px;" onclick="cancelAdminEditState()">取消</button>
+            </div>
+        </div>
+
+        <div class="filter-bar-container">
+            <div style="font-size:0.75rem; font-weight:bold; color:var(--success); display:flex; justify-content:space-between; align-items:center;">
+                <span>🔍 课程搜索</span>
+                <span style="font-size:0.6rem; color:var(--text-muted);" id="filterCountIndicator">匹配中...</span>
+            </div>
+            <div class="filter-grid">
+                <select id="filterDept" class="filter-input-cell" onchange="refreshAdminViewTable()">
+                    <option value="ALL">-- 全部教研组 --</option>
+                    <option value="Chinese">语文组</option><option value="English">英语组</option>
+                    <option value="Math">数学组</option><option value="Physics">物理组</option>
+                    <option value="Chemistry">化学组</option><option value="Biology">生物组</option>
+                    <option value="Humanities">人文组</option><option value="Elective_One">选修一</option>
+                    <option value="Elective_Two">选修二</option>
+                </select>
+                <select id="filterGrade" class="filter-input-cell" onchange="refreshAdminViewTable()">
+                    <option value="ALL">-- 全部年级 --</option>
+                    <option value="9">Grade 9 (预高)</option>
+                    <option value="10">Grade 10 (高一)</option>
+                    <option value="11">Grade 11 (高二)</option>
+                    <option value="12">Grade 12 (高三)</option>
+                </select>
+            </div>
+            <div class="filter-grid">
+                <input type="text" id="filterId" class="filter-input-cell" placeholder="模糊搜索代码 (如: MATH)..." oninput="refreshAdminViewTable()">
+                <input type="text" id="filterName" class="filter-input-cell" placeholder="模糊搜索名称 (如: Calculus)..." oninput="refreshAdminViewTable()">
+            </div>
+        </div>
+
+        <div style="font-size:0.75rem; font-weight:bold; margin-top:2px;">📊 筛选大纲数据库结果：</div>
+        <div class="table-container" style="max-height: 120px;">
+            <table id="adminTable">
+                <thead><tr><th>代码ID</th><th>课程名称</th><th>年级</th><th>操作</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <button class="btn btn-danger" style="width:100%; font-size:0.65rem; padding:3px;" onclick="resetToOfficialDatabase()">恢复平和白皮书出厂设置</button>
+    </div>
+
+</div>
+
+<div class="modal-mask" id="exchangeModal">
+    <div class="modal-box">
+        <h3 id="modalTitle" style="color:var(--primary); font-size:0.95rem;">课程详情与级别调整中心</h3>
+        <div style="background:var(--bg-base); padding:10px; border-radius:4px; font-size:0.75rem; margin:10px 0; color:#cbd5e1; border:1px solid var(--border);" id="modalBodyText"></div>
+        <div style="font-size:0.75rem; font-weight:bold; color:var(--accent); margin-bottom:6px;">🔄 分班考/真实选择调整：</div>
+        <div class="alternative-list" id="modalAlternatives"></div>
+        <div style="display:flex; justify-content:flex-end; margin-top:12px;">
+            <button class="btn btn-danger" onclick="closeModal()">关闭返回控制舱</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-mask" id="passwordModal">
+    <div class="modal-box" style="max-width: 350px;">
+        <h3 style="color:var(--accent); font-size:0.95rem; margin-bottom:12px;">🔐 修改教务控制密钥</h3>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <div class="form-item"><label>原密码</label><input type="password" id="pwdOld"></div>
+            <div class="form-item"><label>新密码</label><input type="password" id="pwdNew1"></div>
+            <div class="form-item"><label>确认新密码</label><input type="password" id="pwdNew2"></div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:15px;">
+            <button class="btn btn-primary" onclick="executePasswordChange()">确认更新</button>
+            <button class="btn btn-danger" onclick="closePasswordModal()">取消</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// =====================================================================
+// DATA & CORES
+// =====================================================================
+const DEFAULT_GPA_MATRIX = [
+    { grade: "A",  minScore: 93, unweightedGpa: 4.0 },
+    { grade: "A-", minScore: 89, unweightedGpa: 3.7 },
+    { grade: "B+", minScore: 85, unweightedGpa: 3.3 },
+    { grade: "B",  minScore: 81, unweightedGpa: 3.0 },
+    { grade: "B-", minScore: 78, unweightedGpa: 2.7 },
+    { grade: "C+", minScore: 75, unweightedGpa: 2.3 },
+    { grade: "C",  minScore: 71, unweightedGpa: 2.0 },
+    { grade: "C-", minScore: 68, unweightedGpa: 1.7 },
+    { grade: "D+", minScore: 65, unweightedGpa: 1.3 },
+    { grade: "D",  minScore: 60, unweightedGpa: 1.0 },
+    { grade: "F",  minScore: 0,  unweightedGpa: 0.0 }
+];
+
+const METADATA_BASE = [
+    {id: "CHI09", name: "Pre-AP Chinese Literature 9", dept: "Chinese", type: "Regular", weight: 4.0, credit: 1.0, grades: [9], prereqs: [], desc: "Introductory essay writing and analysis."},
+    {id: "ENG09", name: "English Foundation 9", dept: "English", type: "Regular", weight: 4.0, credit: 1.0, grades: [9], prereqs: [], desc: "Core grammar, vocabulary building and reading."},
+    {id: "MATH09", name: "Integrated Math 9", dept: "Math", type: "Regular", weight: 4.0, credit: 1.0, grades: [9], prereqs: [], desc: "Algebra fundamentals and introductory geometry."},
+    {id: "PHYS09", name: "Introductory Physics 9", dept: "Physics", type: "Regular", weight: 4.0, credit: 1.0, grades: [9], prereqs: [], desc: "Conceptual physics and basic lab guidelines."},
+    {id: "CHEM09", name: "Introductory Chemistry 9", dept: "Chemistry", type: "Regular", weight: 4.0, credit: 1.0, grades: [9], prereqs: [], desc: "Basic elements and elemental bonding layout."},
+    {id: "BIO09", name: "Introductory Biology 9", dept: "Biology", type: "Regular", weight: 4.0, credit: 1.0, grades: [9], prereqs: [], desc: "Introduction to life sciences and ecology."},
+    {id: "HIST09", name: "Global Studies 9", dept: "Humanities", type: "Regular", weight: 4.0, credit: 1.0, grades: [9], prereqs: [], desc: "Foundational regional and world geography overview."},
+    {id: "ELC09_CS", name: "Intro to Coding 9", dept: "Elective_One", type: "Regular", weight: 4.0, credit: 1.0, grades: [9], prereqs: [], desc: "Scratch and introductory logic structures."},
+    {id: "ELC09_EC", name: "Business Basics 9", dept: "Elective_Two", type: "Regular", weight: 4.0, credit: 1.0, grades: [9], prereqs: [], desc: "Basic economic systems and enterprise definitions."},
+
+    {id: "CHI10", name: "Chinese Literature 10", dept: "Chinese", type: "Honor", weight: 4.5, credit: 1.0, grades: [10], prereqs: [], desc: "Focuses on classical Chinese ancient sense."},
+    {id: "CHI11", name: "Chinese Literature 11", dept: "Chinese", type: "Honor", weight: 4.5, credit: 1.0, grades: [11], prereqs: ["CHI10"], desc: "Axial Age philosophy readings."},
+    {id: "CHI12", name: "Chinese Literature 12", dept: "Chinese", type: "Honor", weight: 4.5, credit: 1.0, grades: [12], prereqs: ["CHI11"], desc: "Advanced textual dissertation analysis."},
+    {id: "ENG_HON10", name: "Pre-AP English Language (Honor)", dept: "English", type: "Honor", weight: 4.5, credit: 1.0, grades: [10], prereqs: [], desc: "Intensive training on rhetorical analysis."},
+    {id: "ENG_AP11", name: "AP English Language & Composition", dept: "English", type: "Advance", weight: 5.0, credit: 1.0, grades: [11], prereqs: [], desc: "Focuses on identification of rhetorical strategies."},
+    {id: "ENG_AP12", name: "AP English Literature & Composition", dept: "English", type: "Advance", weight: 5.0, credit: 1.0, grades: [12], prereqs: [], desc: "College-level intensive studies of fiction."},
+    {id: "MATH_HON10", name: "Pre-AP Precalculus (Honor)", dept: "Math", type: "Honor", weight: 4.5, credit: 1.0, grades: [10], prereqs: [], desc: "Rigorous framework of mathematical reasoning."},
+    {id: "MATH_AP_BC", name: "AP Calculus BC", dept: "Math", type: "Advance", weight: 5.0, credit: 1.0, grades: [11], prereqs: [], desc: "Limits, derivatives, improper integrals, Taylor series."},
+    {id: "MATH_POST_LA", name: "Post-AP Linear Algebra", dept: "Math", type: "Advance", weight: 5.0, credit: 1.0, grades: [12], prereqs: ["MATH_AP_BC"], desc: "Vector spaces, transformations, matrix algebra."},
+    {id: "PHYS_AP1", name: "AP Physics 1 (Algebra-Based)", dept: "Physics", type: "Advance", weight: 5.0, credit: 1.0, grades: [10, 11], prereqs: [], desc: "Explore fields, force interactions, angular momentum."},
+    {id: "PHYS_AP_C", name: "AP Physics C: Mechanics", dept: "Physics", type: "Advance", weight: 5.0, credit: 1.0, grades: [11, 12], prereqs: [], desc: "Calculus-based mechanics parsing."},
+    {id: "CHEM_HON10", name: "Pre-AP Chemistry (Honor)", dept: "Chemistry", type: "Honor", weight: 4.5, credit: 1.0, grades: [10, 11], prereqs: [], desc: "Particulate-level understanding of matter."},
+    {id: "CHEM_AP11", name: "AP Chemistry", dept: "Chemistry", type: "Advance", weight: 5.0, credit: 1.0, grades: [11, 12], prereqs: [], desc: "Intermolecular forces, kinetics, chemical equilibrium."},
+    {id: "BIO_AP12", name: "AP Biology", dept: "Biology", type: "Advance", weight: 5.0, credit: 1.0, grades: [11, 12], prereqs: ["CHEM_HON10"], desc: "Cellular energetics, evolution metrics."},
+    {id: "HIST_AP_WORLD", name: "AP World History: Modern", dept: "Humanities", type: "Advance", weight: 5.0, credit: 1.0, grades: [10, 11], prereqs: [], desc: "Advanced database synthesis of global history tracks."},
+    {id: "HIST_AP_US", name: "AP United States History", dept: "Humanities", type: "Advance", weight: 5.0, credit: 1.0, grades: [11, 12], prereqs: [], desc: "Data-based questions tracking US History."},
+    {id: "SUB_AP_CSP", name: "AP Computer Science Principles", dept: "Elective_One", type: "Advance", weight: 5.0, credit: 1.0, grades: [10, 11], prereqs: [], desc: "Algorithmic logic and python coding abstractions."},
+    {id: "SUB_AP_CSA", name: "AP Computer Science A", dept: "Elective_One", type: "Advance", weight: 5.0, credit: 1.0, grades: [11, 12], prereqs: [], desc: "Object-oriented programming logic in Java."},
+    {id: "SUB_AP_MICRO", name: "AP Microeconomics", dept: "Elective_Two", type: "Advance", weight: 5.0, credit: 1.0, grades: [10, 11], prereqs: [], desc: "Consumer behaviors, marginal efficiencies."},
+    {id: "SUB_AP_MACRO", name: "AP Macroeconomics", dept: "Elective_Two", type: "Advance", weight: 5.0, credit: 1.0, grades: [11, 12], prereqs: [], desc: "National aggregate outputs, monetary curves."}
+];
+
+let globalDatabase = JSON.parse(localStorage.getItem('PH_COCKPIT_DB')) || METADATA_BASE;
+let gpaMatrix = JSON.parse(localStorage.getItem('PH_GPA_MATRIX')) || DEFAULT_GPA_MATRIX;
+
+let activePlan = { 9: [], 10: [], 11: [], 12: [] };
+let activeProfile = { grade: 9, major: "undecided", targetGpa: 4.0, interests: "" };
+let targetedModalGrade = 10;
+let targetedModalDept = "";
+
+// 存储手动填写的历史学年整体GPA结果
+let historicalGpaInputData = {
+    9:  { unweighted: null, weighted: null },
+    10: { unweighted: null, weighted: null },
+    11: { unweighted: null, weighted: null }
+};
+
+window.onload = function() {
+    if(!localStorage.getItem('PH_ADMIN_PASSWORD')) {
+        localStorage.setItem('PH_ADMIN_PASSWORD', '1234');
+    }
+    refreshAdminViewTable();
+    renderGpaMatrixAdminTable();
+    handleGradeChangeRefresh();
+};
+
+// =====================================================================
+// AUTHENTICATION
+// =====================================================================
+function tryAdminLogin() {
+    let inputPwd = document.getElementById('admPwd').value.trim();
+    if(inputPwd === localStorage.getItem('PH_ADMIN_PASSWORD')) {
+        document.getElementById('roleBadge').innerText = "ADMIN CONTROLLER";
+        document.getElementById('roleBadge').className = "role-tag admin";
+        document.getElementById('loginFormElements').style.display = "none";
+        document.getElementById('logoutFormElements').style.display = "inline-flex";
+        document.getElementById('mainLayoutGrid').className = "three-column-layout admin-active";
+        document.getElementById('admPwd').value = "";
+        refreshAdminViewTable();
+        alert("🔓 鉴权成功！大纲控制及筛选模块开放。");
+    } else {
+        alert("❌ 口令错误，拦截访问。");
+    }
+}
+
+function adminLogout() {
+    document.getElementById('roleBadge').innerText = "STUDENT VIEW";
+    document.getElementById('roleBadge').className = "role-tag";
+    document.getElementById('loginFormElements').style.display = "inline-flex";
+    document.getElementById('logoutFormElements').style.display = "none";
+    document.getElementById('mainLayoutGrid').className = "three-column-layout";
+    cancelAdminEditState();
+}
+
+function renderGpaMatrixAdminTable() {
+    let tbody = document.getElementById('gpaMatrixAdminBody');
+    tbody.innerHTML = "";
+    gpaMatrix.forEach((row, index) => {
+        let tr = document.createElement('tr');
+        let inputHtml = row.grade === "F" ? `<span style="color:var(--text-muted); font-size:0.65rem;">0分固定</span>` :
+            `<input type="number" class="matrix-score-input" data-index="${index}" value="${row.minScore}" min="0" max="100" style="width:45px; background:#000; border:1px solid #333; color:var(--accent); text-align:center; font-size:0.65rem; border-radius:3px;">`;
+        tr.innerHTML = `<td><b>${row.grade}</b></td><td>${inputHtml}</td><td>${row.unweightedGpa.toFixed(1)}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+function saveGpaMatrixSettings() {
+    let inputs = document.querySelectorAll('.matrix-score-input');
+    let tempMatrix = JSON.parse(JSON.stringify(gpaMatrix));
+    inputs.forEach(input => {
+        let idx = parseInt(input.getAttribute('data-index'));
+        let val = parseInt(input.value);
+        if(!isNaN(val) && val >= 0 && val <= 100) tempMatrix[idx].minScore = val;
+    });
+    for(let i = 0; i < tempMatrix.length - 1; i++) {
+        if(tempMatrix[i].minScore <= tempMatrix[i+1].minScore) {
+            alert(`❌ 更改失败：【${tempMatrix[i].grade}】红线分必须高于下一档【${tempMatrix[i+1].grade}】！`);
+            return;
+        }
+    }
+    gpaMatrix = tempMatrix;
+    localStorage.setItem('PH_GPA_MATRIX', JSON.stringify(gpaMatrix));
+    alert("💾 GPA 映射矩阵全局热更新成功！");
+    runGpaCalcEngine();
+}
+
+// =====================================================================
+// FILTER ENGINE
+// =====================================================================
+function refreshAdminViewTable() {
+    let tbody = document.querySelector('#adminTable tbody');
+    tbody.innerHTML = "";
+    let selDept = document.getElementById('filterDept').value;
+    let selGrade = document.getElementById('filterGrade').value;
+    let keywordId = document.getElementById('filterId').value.trim().toUpperCase();
+    let keywordName = document.getElementById('filterName').value.trim().toLowerCase();
+
+    let filteredList = globalDatabase.filter(c => {
+        if (selDept !== "ALL" && c.dept !== selDept) return false;
+        if (selGrade !== "ALL" && !c.grades.includes(parseInt(selGrade))) return false;
+        if (keywordId && !c.id.toUpperCase().includes(keywordId)) return false;
+        if (keywordName && !c.name.toLowerCase().includes(keywordName)) return false;
+        return true;
+    });
+
+    document.getElementById('filterCountIndicator').innerText = `共匹配到 ${filteredList.length} 门课程`;
+    if(filteredList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="color:var(--text-muted); text-align:center; font-style:italic; font-size:0.65rem; padding:10px;">⚠️ 未找到匹配的教学大纲...</td></tr>`;
+        return;
+    }
+
+    filteredList.forEach(c => {
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><b>${c.id}</b></td>
+            <td style="max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${c.name}</td>
+            <td><span style="color:var(--success); font-weight:bold;">G${c.grades.join('/')}</span></td>
+            <td>
+                <button class="btn btn-primary" style="padding:1px 5px; font-size:0.6rem;" onclick="initEditCourseBackfill('${c.id}')">编</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// =====================================================================
+// 历史回填响应与生成引擎
+// =====================================================================
+function handleGradeChangeRefresh() {
+    let currentGrade = parseInt(document.getElementById('studentGrade').value);
+    activeProfile.grade = currentGrade;
+    
+    let historyBox = document.getElementById('historyGpaPanel');
+    let container = document.getElementById('historyInputsContainer');
+    let titleSpan = document.getElementById('scoreSectionTitle');
+    
+    let labelYear = currentGrade===9?"预高":(currentGrade===10?"高一":(currentGrade===11?"高二":"高三"));
+    titleSpan.innerText = `请输入 【Grade ${currentGrade} (${labelYear})】 原始选科百分分：`;
+
+    container.innerHTML = "";
+    
+    // 只有选择 G10, G11, G12 时，才需要渲染之前学年的整体GPA历史回填框
+    if(currentGrade > 9) {
+        historyBox.style.display = "block";
+        for(let y = 9; y < currentGrade; y++) {
+            let labelPast = y===9?"预高":(y===10?"高一":"高二");
+            let div = document.createElement('div');
+            div.className = "history-grid-row";
+            div.innerHTML = `
+                <span style="font-size:0.7rem; color:#fff;"><b>G${y} (${labelPast})</b> 整体：</span>
+                <input type="number" class="history-input hist-unweight" data-year="${y}" step="0.01" min="0" max="4.0" placeholder="未加权 (如3.8)" oninput="cacheHistoryGpaInputs()">
+                <input type="number" class="history-input hist-weight" data-year="${y}" step="0.01" min="0" max="5.0" placeholder="加权 (如4.3)" oninput="cacheHistoryGpaInputs()">
+            `;
+            container.appendChild(div);
+        }
+    } else {
+        historyBox.style.display = "none";
+    }
+
+    // 重置对应面板输出
+    for(let y=9; y<=12; y++) {
+        document.getElementById(`g${y}Unweighted`).innerText = "--";
+        document.getElementById(`g${y}Weighted`).innerText = "--";
+    }
+    document.getElementById('outUnweightedTotal').innerText = "--";
+    document.getElementById('outWeightedTotal').innerText = "--";
+
+    if(activePlan[currentGrade] && activePlan[currentGrade].length > 0) {
+        renderScoreInputsGrid();
+    }
+}
+
+function cacheHistoryGpaInputs() {
+    let unweightFields = document.querySelectorAll('.hist-unweight');
+    let weightFields = document.querySelectorAll('.hist-weight');
+
+    // 清空缓存
+    for(let y in historicalGpaInputData) {
+        historicalGpaInputData[y].unweighted = null;
+        historicalGpaInputData[y].weighted = null;
+    }
+
+    unweightFields.forEach(f => {
+        let y = parseInt(f.getAttribute('data-year'));
+        let val = parseFloat(f.value);
+        if(!isNaN(val)) historicalGpaInputData[y].unweighted = val;
+    });
+
+    weightFields.forEach(f => {
+        let y = parseInt(f.getAttribute('data-year'));
+        let val = parseFloat(f.value);
+        if(!isNaN(val)) historicalGpaInputData[y].weighted = val;
+    });
+
+    // 重新触发总计算联动
+    runGpaCalcEngine();
+}
+
+// =====================================================================
+// AI RECOMMEND ENGINE
+// =====================================================================
+function syncWeightBonus() {
+    let t = document.getElementById('cType').value;
+    document.getElementById('cWeight').value = t==='Advance' ? '5.0' : (t==='Honor' ? '4.5' : '4.0');
+}
+
+function triggerAiEngine() {
+    let inputKeywords = document.getElementById('userKeywords').value.trim();
+    let parsedGpaGoal = parseFloat(document.getElementById('gpaGoal').value) || 4.0;
+    let parsedMajor = document.getElementById('targetMajor').value.trim().toLowerCase() || "undecided";
+
+    activeProfile.major = parsedMajor;
+    activeProfile.targetGpa = parsedGpaGoal;
+    activeProfile.interests = inputKeywords ? inputKeywords.toLowerCase() : "";
+
+    activePlan = { 9: [], 10: [], 11: [], 12: [] };
+    let baseTracks = ["Chinese", "English", "Math", "Physics", "Chemistry", "Biology", "Humanities"];
+
+    for (let g = 9; g <= 12; g++) {
+        baseTracks.forEach(dept => {
+            let options = globalDatabase.filter(c => c.dept === dept && c.grades.includes(g));
+            if(options.length === 0) return;
+            activePlan[g].push(getBestMatchCourse(options, dept));
+        });
+
+        if (g === 9 || g === 10) {
+            let allElectives = globalDatabase.filter(c => ["Elective_One", "Elective_Two"].includes(c.dept) && c.grades.includes(g));
+            if (allElectives.length > 0) activePlan[g].push(getBestMatchCourse(allElectives, "Electives"));
+        } else {
+            ["Elective_One", "Elective_Two"].forEach(dept => {
+                let options = globalDatabase.filter(c => c.dept === dept && c.grades.includes(g));
+                if(options.length === 0) return;
+                activePlan[g].push(getBestMatchCourse(options, dept));
+            });
+        }
+    }
+    renderCockpitDashboard();
+    renderScoreInputsGrid();
+}
+
+function getBestMatchCourse(options, dept) {
+    let evaluated = options.map(c => {
+        let fitness = 0;
+        let fullTxt = (c.name + " " + c.desc).toLowerCase();
+        if(activeProfile.major.includes("data") || activeProfile.major.includes("comput") || activeProfile.major.includes("ai")) {
+            if(["Math", "Elective_One"].includes(c.dept)) fitness += 8;
+        }
+        if(activeProfile.major.includes("eng") || activeProfile.major.includes("physic")) {
+            if(["Physics", "Math"].includes(c.dept)) fitness += 8;
+        }
+        if(activeProfile.major.includes("econ") || activeProfile.major.includes("busin")) {
+            if(["Humanities", "Elective_Two"].includes(c.dept) || fullTxt.includes("econ")) fitness += 8;
+        }
+        if (activeProfile.interests) {
+            activeProfile.interests.split(',').forEach(term => {
+                if(term.trim().length > 0 && fullTxt.includes(term.trim())) fitness += 4;
+            });
+        }
+        if(activeProfile.targetGpa >= 4.5 && c.type === "Advance") fitness += 3;
+        return { course: c, score: fitness };
+    }).sort((a,b) => b.score - a.score);
+    return evaluated[0].course;
+}
+
+// =====================================================================
+// FRONTEND INTERACTION
+// =====================================================================
+function renderCockpitDashboard() {
+    let container = document.getElementById('blueprintDashboard');
+    container.innerHTML = "";
+    let totalCredits = 0, weightSum = 0;
+    let currentGrade = activeProfile.grade;
+
+    for (let g = 9; g <= 12; g++) {
+        let section = document.createElement('div');
+        section.className = "grade-section";
+        
+        if (g !== currentGrade) {
+            section.style.opacity = "0.55";
+        }
+
+        let header = document.createElement('div');
+        header.className = "grade-header";
+        
+        let labelYear = g===9?"预高":(g===10?"高一":(g===11?"高二":"高三"));
+        let statusTag = g === currentGrade ? `<span style="color:var(--success); font-weight:bold;">[🎯当前计算年级]</span>` : `<span>[大纲常驻参考]</span>`;
+        header.innerHTML = `<span>📅 Grade ${g} (${labelYear}) ${statusTag}</span>`;
+        section.appendChild(header);
+
+        let stack = document.createElement('div');
+        stack.className = "course-stack";
+        (activePlan[g] || []).forEach(c => {
+            let node = document.createElement('div');
+            node.className = "course-node";
+            node.onclick = () => launchCourseModal(c.id, g, c.dept);
+            let lvlClass = c.type=='Advance'?'lvl-ap':(c.type=='Honor'?'lvl-hon':'lvl-reg');
+            node.innerHTML = `<div><span class="level-tag ${lvlClass}">${c.type}</span><b>[${c.id}]</b> ${c.name}</div><div style="color:var(--text-muted); font-size:0.65rem;">红线: ${c.weight}</div>`;
+            stack.appendChild(node);
+            
+            if(g >= currentGrade) {
+                totalCredits += 1;
+                weightSum += c.weight;
+            }
+        });
+        section.appendChild(stack);
+        container.appendChild(section);
+    }
+    document.getElementById('creditIndicator').innerText = totalCredits;
+    document.getElementById('avgWeightIndicator').innerText = totalCredits > 0 ? (weightSum / totalCredits).toFixed(2) : "0.00";
+}
+
+function launchCourseModal(courseId, grade, dept) {
+    targetedModalGrade = grade; targetedModalDept = dept;
+    let c = globalDatabase.find(x => x.id === courseId);
+    document.getElementById('modalTitle').innerText = `大纲查验与分班级别调换`;
+    document.getElementById('modalBodyText').innerHTML = `<b>课程全称:</b> ${c.name} | <b>难度:</b> ${c.type} <br><b>依赖项:</b> ${c.prereqs.length > 0 ? c.prereqs.join(', ') : '无'}`;
+
+    let alternatives = ((grade === 9 || grade === 10) && ["Elective_One", "Elective_Two"].includes(dept)) ?
+        globalDatabase.filter(x => ["Elective_One", "Elective_Two"].includes(x.dept) && x.grades.includes(grade)) :
+        globalDatabase.filter(x => x.dept === dept && x.grades.includes(grade));
+
+    let altWrap = document.getElementById('modalAlternatives'); altWrap.innerHTML = "";
+    alternatives.forEach(alt => {
+        let isSelected = alt.id === courseId;
+        let div = document.createElement('div'); div.className = "alt-item";
+        div.innerHTML = `<div><span class="level-tag ${alt.type==='Advance'?'lvl-ap':(alt.type==='Honor'?'lvl-hon':'lvl-reg')}">${alt.type}</span><b>${alt.name}</b></div>
+            <div>${isSelected ? `<span style="color:var(--success); font-weight:bold;">当前</span>` : `<button class="btn btn-primary" style="padding:2px 6px; font-size:0.65rem;" onclick="processSwapCourse('${courseId}', '${alt.id}')">选择</button>`}</div>`;
+        altWrap.appendChild(div);
+    });
+    document.getElementById('exchangeModal').style.display = "flex";
+}
+
+function processSwapCourse(oldId, newId) {
+    let nextCourse = globalDatabase.find(x => x.id === newId);
+    let grade = targetedModalGrade;
+    if(nextCourse.prereqs && nextCourse.prereqs.length > 0) {
+        let verified = false;
+        for(let g = 9; g < grade; g++) {
+            if(activePlan[g] && activePlan[g].some(c => nextCourse.prereqs.includes(c.id))) verified = true;
+        }
+        if(!verified) return alert(`⚠️ 选课树拦截：修读此科必须先修完 ${nextCourse.prereqs.join(', ')}。`);
+    }
+    let idx = activePlan[grade].findIndex(x => x.id === oldId);
+    if(idx !== -1) activePlan[grade][idx] = nextCourse;
+    closeModal(); renderCockpitDashboard(); renderScoreInputsGrid();
+}
+function closeModal() { document.getElementById('exchangeModal').style.display = "none"; }
+
+// =====================================================================
+// 计算引擎
+// =====================================================================
+function renderScoreInputsGrid() {
+    let container = document.getElementById('realScoreContainer');
+    container.innerHTML = "";
+    
+    let currentGrade = activeProfile.grade;
+    let targetCourses = activePlan[currentGrade] || [];
+    
+    if(targetCourses.length === 0) {
+        container.innerHTML = `<p style="font-size:0.7rem; color:var(--text-muted); text-align:center;">请先匹配生成蓝图</p>`;
+        return;
+    }
+    
+    targetCourses.forEach((c, idx) => {
+        let div = document.createElement('div');
+        div.className = "score-row";
+        div.innerHTML = `
+            <span style="max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><b>[${c.type}]</b> ${c.name}</span>
+            <input type="number" class="student-score-input" data-year="${currentGrade}" data-type="${c.type}" data-credit="${c.credit || 1.0}" min="0" max="100" placeholder="原始分" oninput="runGpaCalcEngine()">
+            <span class="letter-grade-display" id="letterDisplay_${idx}" style="color:var(--text-muted); text-align:right; font-weight:bold;">--</span>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function runGpaCalcEngine() {
+    let fields = document.querySelectorAll('.student-score-input');
+    let currentGrade = activeProfile.grade;
+
+    let curTotalCredits = 0;
+    let curSumUnweighted = 0;
+    let curSumWeighted = 0;
+
+    fields.forEach((f, idx) => {
+        let v = f.value.trim();
+        let displaySpan = document.getElementById(`letterDisplay_${idx}`);
+        if(v === "" || isNaN(v)) { if(displaySpan) displaySpan.innerText = "--"; return; }
+
+        let score = parseFloat(v);
+        let cType = f.getAttribute('data-type');
+        let cCredit = parseFloat(f.getAttribute('data-credit')) || 1.0;
+
+        let tier = gpaMatrix.find(t => score >= t.minScore);
+        if(!tier) tier = gpaMatrix[gpaMatrix.length - 1];
+        if(displaySpan) displaySpan.innerText = tier.grade;
+
+        let baseGpa = tier.unweightedGpa;
+        let bonus = 0;
+        if(baseGpa > 0) {
+            if(cType === "Advance") bonus = 1.0;
+            else if(cType === "Honor") bonus = 0.5;
+        }
+
+        curTotalCredits += cCredit;
+        curSumUnweighted += (baseGpa * cCredit);
+        curSumWeighted += ((baseGpa + bonus) * cCredit);
+    });
+
+    let finalYearlyData = {
+        9:  { unweighted: null, weighted: null },
+        10: { unweighted: null, weighted: null },
+        11: { unweighted: null, weighted: null },
+        12: { unweighted: null, weighted: null }
+    };
+
+    for(let y = 9; y < currentGrade; y++) {
+        finalYearlyData[y].unweighted = historicalGpaInputData[y].unweighted;
+        finalYearlyData[y].weighted = historicalGpaInputData[y].weighted;
+    }
+
+    if(curTotalCredits > 0) {
+        finalYearlyData[currentGrade].unweighted = curSumUnweighted / curTotalCredits;
+        finalYearlyData[currentGrade].weighted = curSumWeighted / curTotalCredits;
+    }
+
+    for(let y = 9; y <= 12; y++) {
+        let unweightedSpan = document.getElementById(`g${y}Unweighted`);
+        let weightedSpan = document.getElementById(`g${y}Weighted`);
+        
+        let uVal = finalYearlyData[y].unweighted;
+        let wVal = finalYearlyData[y].weighted;
+
+        if(uVal !== null && !isNaN(uVal)) unweightedSpan.innerText = uVal.toFixed(2);
+        else unweightedSpan.innerText = "--";
+
+        if(wVal !== null && !isNaN(wVal)) weightedSpan.innerText = wVal.toFixed(2);
+        else weightedSpan.innerText = "--";
+    }
+
+    let activeYearsCount = 0;
+    let globalUnweightSum = 0;
+    let globalWeightSum = 0;
+
+    for(let y = 9; y <= 12; y++) {
+        let uVal = finalYearlyData[y].unweighted;
+        let wVal = finalYearlyData[y].weighted;
+
+        if(uVal !== null && !isNaN(uVal) && wVal !== null && !isNaN(wVal)) {
+            activeYearsCount++;
+            globalUnweightSum += uVal;
+            globalWeightSum += wVal;
+        }
+    }
+
+    let outUnweightedTotal = document.getElementById('outUnweightedTotal');
+    let outWeightedTotal = document.getElementById('outWeightedTotal');
+
+    if(activeYearsCount > 0) {
+        outUnweightedTotal.innerText = (globalUnweightSum / activeYearsCount).toFixed(2);
+        outWeightedTotal.innerText = (globalWeightSum / activeYearsCount).toFixed(2) + ` (${activeYearsCount}学年联动结算)`;
+    } else {
+        outUnweightedTotal.innerText = "--";
+        outWeightedTotal.innerText = "--";
+    }
+}
+
+// =====================================================================
+// BACKEND MANAGEMENT
+// =====================================================================
+function submitCourseToDatabase() {
+    let id = document.getElementById('cId').value.trim().toUpperCase();
+    let name = document.getElementById('cName').value.trim();
+    let dept = document.getElementById('cDept').value;
+    let type = document.getElementById('cType').value;
+    let weight = parseFloat(document.getElementById('cWeight').value);
+    let gradesArr = document.getElementById('cGrades').value.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x));
+    let prereqStr = document.getElementById('cPrereq').value.trim().toUpperCase();
+    let desc = document.getElementById('cDesc').value;
+
+    if(!id || !name) return alert("❌ 代码和全称不可为空！");
+    let payload = { id, name, dept, type, weight, credit: 1.0, grades: gradesArr, prereqs: prereqStr ? [prereqStr] : [], desc };
+    
+    let idx = globalDatabase.findIndex(c => c.id === id);
+    if(idx !== -1) globalDatabase[idx] = payload;
+    else globalDatabase.push(payload);
+
+    localStorage.setItem('PH_COCKPIT_DB', JSON.stringify(globalDatabase));
+    cancelAdminEditState(); refreshAdminViewTable();
+    if(activeProfile.major) triggerAiEngine(); 
+}
+
+function initEditCourseBackfill(id) {
+    let target = globalDatabase.find(c => c.id === id);
+    if(!target) return;
+    document.getElementById('cId').value = target.id;
+    document.getElementById('cName').value = target.name;
+    document.getElementById('cDept').value = target.dept;
+    document.getElementById('cType').value = target.type;
+    document.getElementById('cWeight').value = target.weight;
+    document.getElementById('cGrades').value = target.grades.join(',');
+    document.getElementById('cPrereq').value = target.prereqs.join(',');
+    document.getElementById('cDesc').value = target.desc || '';
+    document.getElementById('adminFormTitle').innerText = `✏️ 正在修改【${target.id}】大纲`;
+    document.getElementById('btnCancelEdit').style.display = "inline-block";
+}
+
+function cancelAdminEditState() {
+    document.getElementById('cId').value = ""; document.getElementById('cName').value = "";
+    document.getElementById('cPrereq').value = ""; document.getElementById('cDesc').value = "";
+    document.getElementById('adminFormTitle').innerText = "📢 投放/修改平和科目教学大纲";
+    document.getElementById('btnCancelEdit').style.display = "none";
+}
+
+function resetToOfficialDatabase() {
+    if(confirm("确定恢复平和AP白皮书出厂设置吗？")) {
+        globalDatabase = [...METADATA_BASE]; gpaMatrix = [...DEFAULT_GPA_MATRIX];
+        localStorage.setItem('PH_COCKPIT_DB', JSON.stringify(globalDatabase));
+        localStorage.setItem('PH_GPA_MATRIX', JSON.stringify(gpaMatrix));
+        refreshAdminViewTable(); renderGpaMatrixAdminTable(); handleGradeChangeRefresh();
+    }
+}
+
+function openPasswordModal() { document.getElementById('passwordModal').style.display = "flex"; }
+function closePasswordModal() { document.getElementById('passwordModal').style.display = "none"; }
+function executePasswordChange() {
+    let oldInput = document.getElementById('pwdOld').value.trim();
+    let n1 = document.getElementById('pwdNew1').value.trim();
+    let n2 = document.getElementById('pwdNew2').value.trim();
+    if(oldInput !== localStorage.getItem('PH_ADMIN_PASSWORD')) return alert("❌ 原密钥错误！");
+    if(n1 !== n2 || !n1) return alert("❌ 密码输入不匹配！");
+    localStorage.setItem('PH_ADMIN_PASSWORD', n1);
+    alert("🔑 更换成功！"); closePasswordModal(); adminLogout(); 
+}
+</script>
+</body>
+</html>
